@@ -7,26 +7,48 @@
 /*run in windows only*/
 #include <windows.h>
 
-#define MAZE_WIDTH 60
-#define MAZE_HEIGHT 20
-#define NOTMOVE 0;
-#define LEFT -1;
-#define RIGHT 1;
-#define UP 2;
-#define DOWN -2;
+#include "type.h"
 
-static char maze[100][100];
+/*the maze map*/
+static char **maze;
 
-int x, y, p, q;
+/*location of exit*/
+Position exitPos = { 0, 0 };
+
+/*location of person*/
+Position personPos = { 0, 0 };
+
+/*command buf*/
+char ch;
+
+static void markByCoordinate(int const *x, int const *y, char ch)
+{
+	maze[*x][*y] = ch;
+}
+
+static void markByPosition(Position const *pos, char ch)
+{
+	markByCoordinate(&pos->x, &pos->y, ch);
+}
+
+void freeMaze()
+{
+	if (maze != NULL)
+		free(maze);
+}
 
 void clearMaze()
 {
+	freeMaze();
+	
+	maze = malloc(MAZE_HEIGHT * sizeof(char*));
+
 	for (int i = 0; i < MAZE_HEIGHT; i++)
 	{
-		for (int j = 0; j < MAZE_WIDTH; j++)
-		{
-			maze[i][j] = '#';
-		}
+		char *line;
+		line = malloc(MAZE_WIDTH * sizeof(char));
+		memset(line, '#', MAZE_WIDTH);
+		maze[i] = line;
 	}
 }
 
@@ -64,28 +86,30 @@ void initMazeExit()
 	int s = rand() % 4;
 	int _p = (rand() % (MAZE_HEIGHT - 2)) + 1;
 	int _q = (rand() % (MAZE_WIDTH - 2)) + 1;
+
 	switch (s)
 	{
 		case 0:
-			p = 0; q = _q; break;
+			exitPos.x = 0; exitPos.y = _q; break;
 		case 1:
-			p = _p; q = MAZE_WIDTH - 1; break;
+			exitPos.x = _p; exitPos.y = MAZE_WIDTH - 1; break;
 		case 2:
-			p = MAZE_HEIGHT - 1; q = _q; break;
+			exitPos.x = MAZE_HEIGHT - 1; exitPos.y = _q; break;
 		case 3:
-			p = _p; q = 0; break;
+			exitPos.x = _p; exitPos.y = 0; break;
 	}
-	maze[p][q] = ' ';
+
+	markByPosition(&exitPos, ' ');
 }
 
 void initFirstPosition()
 {
-	while (abs(x - p) < MAZE_HEIGHT / 2 || abs(y - q) < MAZE_WIDTH / 2)
-	{
-		x = (rand() % (MAZE_HEIGHT - 2)) + 1;
-		y = (rand() % (MAZE_WIDTH - 2)) + 1;
-	}	
-	maze[x][y] = 'O';
+	do{
+		personPos.x = (rand() % (MAZE_HEIGHT - 2)) + 1;
+		personPos.y = (rand() % (MAZE_WIDTH - 2)) + 1;
+	} while (abs(personPos.x - exitPos.x) < (MAZE_HEIGHT / 2 - 1) || abs(personPos.y - exitPos.y) < (MAZE_WIDTH / 2 - 1));
+
+	markByPosition(&personPos, 'O');
 }
 
 int buildAmazingMaze()
@@ -94,101 +118,83 @@ int buildAmazingMaze()
 	initMazeExit();
 	initFirstPosition();
 
-	int last_direct[3];
-	last_direct[0] = NOTMOVE;
-	last_direct[1] = NOTMOVE;
-	last_direct[2] = NOTMOVE;
-	int curr_direct = NOTMOVE;
-	int _x, _y, step_count;
+	int step_count = 0;
 	int positive_left_right = NOTMOVE;
 	int positive_up_down = NOTMOVE;
-	int ret = -1;
+	Position runWayPos = { personPos.x, personPos.y };
 
-	_x = x;
-	_y = y;
-	step_count = 0;
-
-	if (x - p > 0)
+	if (personPos.x - exitPos.x > 0)
 		positive_up_down = 2;
 	else
 		positive_up_down = 3;
 
-	if (y - q > 0)
+	if (personPos.y - exitPos.y > 0)
 		positive_left_right = 0;
 	else
 		positive_left_right = 1;
 
-	while (1)
+	while ((runWayPos.x != exitPos.x || runWayPos.y + 1 != exitPos.y)
+		&& (runWayPos.x != exitPos.x || runWayPos.y - 1 != exitPos.y)
+		&& (runWayPos.x + 1 != exitPos.x || runWayPos.y != exitPos.y)
+		&& (runWayPos.x - 1 != exitPos.x || runWayPos.y != exitPos.y))
 	{
-		/*build successful*/
-		if ((_x == p && _y + 1 == q) 
-			|| (_x == p && _y - 1 == q) 
-			|| (_x + 1 == p && _y == q) 
-			|| (_x - 1 == p && _y == q))
-		{
-			ret = 0;
-			break;
-		}
+		step_count++;
 
-		/*build fail*/
+		/*too many steps, build fail*/
 		if (step_count > (MAZE_HEIGHT - 1)*(MAZE_WIDTH - 1) / 4)
-		{
-			break;
-		}
+			return -1;
 
-		int __x, __y;
-		int rand_direct = rand() % 6;
+		DirectPosition runWay = {
+			{0, 0}, 0, {0, 0, 0}
+		};
 
 		/*more chanse direct to exit*/
+		int rand_direct = rand() % 6;
 		if (rand_direct == 4)
 			rand_direct = positive_up_down;
 		else if (rand_direct == 5)
 			rand_direct = positive_left_right;
 
-		switch (rand_direct)
-		{
+		switch (rand_direct){
 			/*left one step*/
-		case 0:
-			curr_direct = LEFT; __x = _x; __y = _y - 1; break;
+			case 0:
+				runWay.curr_direct = LEFT; runWay.pos.x = runWayPos.x; runWay.pos.y = runWayPos.y - 1; break;
 			/*right one step*/
-		case 1:
-			curr_direct = RIGHT; __x = _x; __y = _y + 1; break;
+			case 1:
+				runWay.curr_direct = RIGHT; runWay.pos.x = runWayPos.x; runWay.pos.y = runWayPos.y + 1; break;
 			/*up one step*/
-		case 2:
-			curr_direct = UP; __x = _x - 1; __y = _y; break;
+			case 2:
+				runWay.curr_direct = UP; runWay.pos.x = runWayPos.x - 1; runWay.pos.y = runWayPos.y; break;
 			/*down one step*/
-		case 3:
-			curr_direct = DOWN; __x = _x + 1; __y = _y; break;
+			case 3:
+				runWay.curr_direct = DOWN; runWay.pos.x = runWayPos.x + 1; runWay.pos.y = runWayPos.y; break;
 		}
 
-		if (last_direct[2] + curr_direct == 0)	//don't turn around
-			continue;
-		else if (last_direct[0] + last_direct[1] + last_direct[2] + curr_direct == 0)	//don't turn around
-			continue;
-		else if (__x == 0 || __x == MAZE_HEIGHT - 1)	//up and down wall
-			continue;
-		else if (__y == 0 || __y == MAZE_WIDTH - 1)	//left and right wall
+		if (runWay.last_directs[2] + runWay.curr_direct == 0	//don't turn around
+		 || runWay.last_directs[0] + runWay.last_directs[1] + runWay.last_directs[2] + runWay.curr_direct == 0	//don't turn around
+		 || runWay.pos.x == 0 || runWay.pos.x == MAZE_HEIGHT - 1	//up and down wall
+		 || runWay.pos.y == 0 || runWay.pos.y == MAZE_WIDTH - 1)	//left and right wall
 			continue;
 			
-		last_direct[0] = last_direct[1];
-		last_direct[1] = last_direct[2];
-		last_direct[2] = curr_direct;
-		_x = __x;
-		_y = __y;
+		runWay.last_directs[0] = runWay.last_directs[1];
+		runWay.last_directs[1] = runWay.last_directs[2];
+		runWay.last_directs[2] = runWay.curr_direct;
 		
-		maze[_x][_y] = ' ';
+		runWayPos.x = runWay.pos.x;
+		runWayPos.y = runWay.pos.y;
+
+		markByPosition(&runWayPos, ' ');
 	}
 
 	spaceMaze();
 
-	return ret;
+	return 0;
 }
 
 int main()
 {	
 	srand((unsigned int)time(NULL));
-	char ch;
-
+	
 	ch = 'y';
 
 	while (ch == 'y')
@@ -196,40 +202,40 @@ int main()
 		while (buildAmazingMaze() < 0);
 		system("cls");
 
-		for (int i = 0; i <= MAZE_HEIGHT; i++)
+		for (int i = 0; i < MAZE_HEIGHT; i++)
 			puts(maze[i]);
 
-		while (x != p || y != q)
+		while (personPos.x != exitPos.x || personPos.y != exitPos.y)
 		{
 			ch = _getch();
 			switch (ch)
 			{
 			case 'w':
-				if (maze[x - 1][y] != '#')
+				if (maze[personPos.x - 1][personPos.y] != '#')
 				{
-					maze[x--][y] = ' ';
-					maze[x][y] = 'O';
+					maze[personPos.x--][personPos.y] = ' ';
+					maze[personPos.x][personPos.y] = 'O';
 				}
 				break;
 			case 's':
-				if (maze[x + 1][y] != '#')
+				if (maze[personPos.x + 1][personPos.y] != '#')
 				{
-					maze[x++][y] = ' ';
-					maze[x][y] = 'O';
+					maze[personPos.x++][personPos.y] = ' ';
+					maze[personPos.x][personPos.y] = 'O';
 				}
 				break;
 			case 'a':
-				if (maze[x][y - 1] != '#')
+				if (maze[personPos.x][personPos.y - 1] != '#')
 				{
-					maze[x][y--] = ' ';
-					maze[x][y] = 'O';
+					maze[personPos.x][personPos.y--] = ' ';
+					maze[personPos.x][personPos.y] = 'O';
 				}
 				break;
 			case 'd':
-				if (maze[x][y + 1] != '#')
+				if (maze[personPos.x][personPos.y + 1] != '#')
 				{
-					maze[x][y++] = ' ';
-					maze[x][y] = 'O';
+					maze[personPos.x][personPos.y++] = ' ';
+					maze[personPos.x][personPos.y] = 'O';
 				}
 				break;
 			default:
@@ -237,7 +243,7 @@ int main()
 			}
 
 			system("cls");
-			for (int i = 0; i <= MAZE_HEIGHT; i++)
+			for (int i = 0; i < MAZE_HEIGHT; i++)
 				puts(maze[i]);
 		}
 
@@ -251,7 +257,8 @@ int main()
 			while (getchar() != '\n'); /* Clear the input buffer */
 		} while (ret != 1);
 	}
-	
+
+	freeMaze();
 	printf("See you!\n");
 	Sleep(3000);
 	return EXIT_SUCCESS;
