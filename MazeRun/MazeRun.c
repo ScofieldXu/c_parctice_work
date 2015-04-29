@@ -7,24 +7,23 @@
 /*run in windows only*/
 #include <windows.h>
 
-const int maze_width = 60;
-const int maze_height = 20;
+#define MAZE_WIDTH 60
+#define MAZE_HEIGHT 20
+#define NOTMOVE 0;
+#define LEFT -1;
+#define RIGHT 1;
+#define UP 2;
+#define DOWN -2;
 
-char maze[100][100];
+static char maze[100][100];
 
 int x, y, p, q;
 
-const int NOTMOVE = 0;
-const int LEFT = -1;
-const int RIGHT = 1;
-const int UP = 2;
-const int DOWN = -2;
-
 void clearMaze()
 {
-	for (int i = 0; i < maze_height; i++)
+	for (int i = 0; i < MAZE_HEIGHT; i++)
 	{
-		for (int j = 0; j < maze_width; j++)
+		for (int j = 0; j < MAZE_WIDTH; j++)
 		{
 			maze[i][j] = '#';
 		}
@@ -33,9 +32,9 @@ void clearMaze()
 
 void spaceMaze()
 {
-	for (int i = 1; i < maze_height - 1; i++)
+	for (int i = 1; i < MAZE_HEIGHT - 1; i++)
 	{
-		for (int j = 1; j < maze_width - 1; j++)
+		for (int j = 1; j < MAZE_WIDTH - 1; j++)
 		{
 			if (maze[i][j] == '#')
 			{
@@ -45,13 +44,13 @@ void spaceMaze()
 			else if (maze[i][j] == ' ')
 			{
 				if ((maze[i][j - 1] == ' ' || (j - 1 == 0))
-					&& (maze[i][j + 1] == ' ' || (j + 1 == maze_width - 1))
+					&& (maze[i][j + 1] == ' ' || (j + 1 == MAZE_WIDTH - 1))
 					&& (maze[i - 1][j] == ' ' || (i - 1 == 0))
-					&& (maze[i + 1][j] == ' ' || (i + 1 == maze_height - 1))
+					&& (maze[i + 1][j] == ' ' || (i + 1 == MAZE_HEIGHT - 1))
 					&& (maze[i - 1][j - 1] == ' ' || (i - 1 == 0) || (j - 1 == 0))
-					&& (maze[i - 1][j + 1] == ' ' || (i - 1 == 0) || (j + 1 == maze_width - 1))
-					&& (maze[i + 1][j - 1] == ' ' || (i + 1 == maze_height - 1) || (j - 1 == 0))
-					&& (maze[i + 1][j + 1] == ' ' || (i + 1 == maze_height - 1) || (j + 1 == maze_width - 1)))
+					&& (maze[i - 1][j + 1] == ' ' || (i - 1 == 0) || (j + 1 == MAZE_WIDTH - 1))
+					&& (maze[i + 1][j - 1] == ' ' || (i + 1 == MAZE_HEIGHT - 1) || (j - 1 == 0))
+					&& (maze[i + 1][j + 1] == ' ' || (i + 1 == MAZE_HEIGHT - 1) || (j + 1 == MAZE_WIDTH - 1)))
 				{
 					maze[i][j] = '#';
 				}
@@ -63,16 +62,16 @@ void spaceMaze()
 void initMazeExit()
 {
 	int s = rand() % 4;
-	int _p = (rand() % (maze_height - 2)) + 1;
-	int _q = (rand() % (maze_width - 2)) + 1;
+	int _p = (rand() % (MAZE_HEIGHT - 2)) + 1;
+	int _q = (rand() % (MAZE_WIDTH - 2)) + 1;
 	switch (s)
 	{
 		case 0:
 			p = 0; q = _q; break;
 		case 1:
-			p = _p; q = maze_width - 1; break;
+			p = _p; q = MAZE_WIDTH - 1; break;
 		case 2:
-			p = maze_height - 1; q = _q; break;
+			p = MAZE_HEIGHT - 1; q = _q; break;
 		case 3:
 			p = _p; q = 0; break;
 	}
@@ -81,10 +80,10 @@ void initMazeExit()
 
 void initFirstPosition()
 {
-	while (abs(x - p) < maze_height / 2 || abs(y - q) < maze_width / 2)
+	while (abs(x - p) < MAZE_HEIGHT / 2 || abs(y - q) < MAZE_WIDTH / 2)
 	{
-		x = (rand() % (maze_height - 2)) + 1;
-		y = (rand() % (maze_width - 2)) + 1;
+		x = (rand() % (MAZE_HEIGHT - 2)) + 1;
+		y = (rand() % (MAZE_WIDTH - 2)) + 1;
 	}	
 	maze[x][y] = 'O';
 }
@@ -95,7 +94,10 @@ int buildAmazingMaze()
 	initMazeExit();
 	initFirstPosition();
 
-	int last_direct[3] = { NOTMOVE,NOTMOVE,NOTMOVE };
+	int last_direct[3];
+	last_direct[0] = NOTMOVE;
+	last_direct[1] = NOTMOVE;
+	last_direct[2] = NOTMOVE;
 	int curr_direct = NOTMOVE;
 	int _x, _y, step_count;
 	int positive_left_right = NOTMOVE;
@@ -129,7 +131,7 @@ int buildAmazingMaze()
 		}
 
 		/*build fail*/
-		if (step_count > (maze_height - 1)*(maze_width - 1) / 4)
+		if (step_count > (MAZE_HEIGHT - 1)*(MAZE_WIDTH - 1) / 4)
 		{
 			break;
 		}
@@ -163,9 +165,9 @@ int buildAmazingMaze()
 			continue;
 		else if (last_direct[0] + last_direct[1] + last_direct[2] + curr_direct == 0)	//don't turn around
 			continue;
-		else if (__x == 0 || __x == maze_height - 1)	//up and down wall
+		else if (__x == 0 || __x == MAZE_HEIGHT - 1)	//up and down wall
 			continue;
-		else if (__y == 0 || __y == maze_width - 1)	//left and right wall
+		else if (__y == 0 || __y == MAZE_WIDTH - 1)	//left and right wall
 			continue;
 			
 		last_direct[0] = last_direct[1];
@@ -194,7 +196,7 @@ int main()
 		while (buildAmazingMaze() < 0);
 		system("cls");
 
-		for (int i = 0; i <= maze_height; i++)
+		for (int i = 0; i <= MAZE_HEIGHT; i++)
 			puts(maze[i]);
 
 		while (x != p || y != q)
@@ -235,7 +237,7 @@ int main()
 			}
 
 			system("cls");
-			for (int i = 0; i <= maze_height; i++)
+			for (int i = 0; i <= MAZE_HEIGHT; i++)
 				puts(maze[i]);
 		}
 
