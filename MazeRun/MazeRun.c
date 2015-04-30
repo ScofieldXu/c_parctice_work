@@ -33,22 +33,29 @@ static void markByPosition(Position const *pos, char ch)
 
 void freeMaze()
 {
-	if (maze != NULL)
+	if (maze != NULL){
+		for (int i = 0; i < MAZE_HEIGHT; i++)
+		{
+			free(maze[i]);
+		}
 		free(maze);
+	}
 }
 
-void clearMaze()
+void initMaze()
 {
-	freeMaze();
+	boolean _init_flag = 0;
+	if (maze == NULL){
+		_init_flag = 1;
+		maze = malloc(MAZE_HEIGHT * sizeof(char*));
+	}
 	
-	maze = malloc(MAZE_HEIGHT * sizeof(char*));
-
 	for (int i = 0; i < MAZE_HEIGHT; i++)
 	{
-		char *line;
-		line = malloc(MAZE_WIDTH * sizeof(char));
-		memset(line, '#', MAZE_WIDTH);
-		maze[i] = line;
+		if (_init_flag)
+			maze[i] = malloc(MAZE_WIDTH * sizeof(char));
+		
+		memset(maze[i], '#', MAZE_WIDTH);
 	}
 }
 
@@ -114,7 +121,7 @@ void initFirstPosition()
 
 int buildAmazingMaze()
 {
-	clearMaze();
+	initMaze();
 	initMazeExit();
 	initFirstPosition();
 
