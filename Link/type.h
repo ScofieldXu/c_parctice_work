@@ -17,3 +17,9 @@ typedef struct doubleLinkNode{
 	struct doubleLinkNode *prev;
 	struct doubleLinkNode *next;
 } DoubleLinkNode;
+
+/*single link*/
+typedef struct doubleLink{
+	struct doubleLinkNode *root;
+	struct doubleLinkNode *last;
+} DoubleLink;
